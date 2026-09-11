@@ -1,0 +1,38 @@
+{
+  "site": "Back Market",
+  "origin": "https://www.backmarket.co.uk",
+  "localePath": "/en-gb",
+  "currency": "GBP",
+  "models": [
+    {
+      "id": "iphone-15",
+      "name": "iPhone 15",
+      "url": "https://www.backmarket.co.uk/en-gb/p/iphone-15"
+    },
+    {
+      "id": "iphone-13",
+      "name": "iPhone 13",
+      "url": "https://www.backmarket.co.uk/en-gb/p/iphone-13"
+    },
+    {
+      "id": "iphone-14",
+      "name": "iPhone 14",
+      "url": "https://www.backmarket.co.uk/en-gb/p/iphone-14"
+    },
+    {
+      "id": "iphone-15-pro",
+      "name": "iPhone 15 Pro",
+      "url": "https://www.backmarket.co.uk/en-gb/p/iphone-15-pro"
+    },
+    {
+      "id": "iphone-14-pro",
+      "name": "iPhone 14 Pro",
+      "url": "https://www.backmarket.co.uk/en-gb/p/iphone-14-pro"
+    },
+    {
+      "id": "iphone-13-pro",
+      "name": "iPhone 13 Pro",
+      "url": "https://www.backmarket.co.uk/en-gb/p/iphone-13-pro"
+    }
+  ]
+}

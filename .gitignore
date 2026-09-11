@@ -1,0 +1,9 @@
+node_modules/
+data/
+!data/.gitkeep
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+*.log
+.DS_Store

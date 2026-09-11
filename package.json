@@ -1,0 +1,22 @@
+{
+  "name": "iphone-price-matrix",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local Playwright crawler for refurbished iPhone configuration prices",
+  "scripts": {
+    "calibrate": "tsx src/cli.ts calibrate",
+    "crawl": "tsx src/cli.ts crawl",
+    "report": "tsx src/cli.ts report",
+    "playwright:install": "playwright install chromium"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@types/node": "^22.20.2",
+    "playwright": "^1.63.0",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
+}
