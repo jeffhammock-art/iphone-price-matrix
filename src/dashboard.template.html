@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iPhone Price Matrix — Value Dashboard</title>
+<style>
+  :root { --bg:#0f1420; --panel:#151b2b; --panel2:#1c2540; --text:#e6e9f0; --muted:#8b93a8; --accent:#38bdf8; }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font:14px/1.45 ui-sans-serif,system-ui,"Segoe UI",sans-serif; margin:0; }
+  header { padding:14px 20px; border-bottom:1px solid #2a3250; background:var(--panel); }
+  header h1 { font-size:19px; margin:0; }
+  header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+  .layout { display:grid; grid-template-columns:290px 1fr; gap:14px; padding:14px; align-items:start; }
+  .panel { background:var(--panel); border:1px solid #2a3250; border-radius:10px; padding:12px 14px; }
+  .panel h2 { font-size:13px; margin:8px 0 5px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  fieldset { border:1px solid #2a3250; border-radius:8px; padding:8px 10px; margin:0 0 10px; }
+  legend { color:var(--muted); font-size:12px; }
+  label.chip { display:inline-flex; align-items:center; gap:5px; font-size:12.5px; padding:2px 7px; border-radius:14px; border:1px solid #3a4466; cursor:pointer; user-select:none; position:relative; }
+  label.chip input { position:absolute; opacity:0; pointer-events:none; width:0; height:0; }
+  label.chip.on { background:var(--panel2); border-color:var(--accent); }
+  label.chip.on::after { content:" ✓"; color:var(--accent); font-weight:bold; }
+  .chipwrap { display:flex; flex-wrap:wrap; gap:5px; }
+  input[type=range] { width:100%; accent-color:var(--accent); }
+  .meta { color:var(--muted); font-size:12px; }
+  .stat { background:var(--panel2); border:1px solid #2a3250; border-radius:8px; padding:6px 10px; }
+  .stat b { color:var(--accent); }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th, td { padding:4px 8px; border-bottom:1px solid #243049; white-space:nowrap; }
+  th { cursor:pointer; user-select:none; }
+  th.sort-asc::after { content:" ▲"; color:var(--accent); }
+  th.sort-desc::after { content:" ▼"; color:var(--accent); }
+  th, td.num { text-align:right; }
+  td.l { text-align:left; }
+  tr:hover td { background:#1b2337; }
+  .bc-New { color:#4ade80; } .bc-Great { color:#86efac; } .bc-Good { color:#fde047; } .bc-Standard { color:#94a3b8; }
+  .sliderrow { display:flex; align-items:center; gap:10px; margin:4px 0 10px; }
+  .sliderrow input[type=range] { flex:1; }
+  .sliderval { font-size:12px; color:var(--muted); min-width:55px; text-align:right; }
+  a { color:var(--accent); }
+  .controls { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; }
+  button, select { background:var(--panel2); color:var(--text); border:1px solid #2a3250; border-radius:7px; padding:4px 8px; font-size:12.5px; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.on { background:var(--panel2); border-color:var(--accent); color:var(--accent); }
+  #refreshData:disabled { opacity:.6; cursor:wait; }
+  .note { color:var(--muted); font-size:12px; }
+  .empty { color:var(--muted); padding:20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>iPhone Price Matrix — best-value picker</h1>
+    <p>Pick your requirements (models, battery condition, minimum storage). Results show the lowest price for each unique configuration, ignoring colour and SIM options. Data embedded from the last clean crawl.</p>
+  <div class="controls" style="margin-top:6px"><button id="refreshData" style="width:auto">Refresh data</button></div>
+</header>
+<div class="layout">
+  <div class="panel">
+    <h2>Source</h2>
+    <div class="chipwrap" id="f-source"></div>
+
+    <h2>Models</h2>
+    <div class="chipwrap" id="f-model"></div>
+
+    <h2>Storage</h2>
+    <div class="chipwrap" id="f-storage"></div>
+
+    <h2>Battery condition</h2>
+    <div class="chipwrap" id="f-battery"></div>
+
+    <h2>Condition</h2>
+    <div class="chipwrap" id="f-condition"></div>
+
+    <h2>Maximum price: <span id="maxPriceLabel">£2000</span></h2>
+    <div class="sliderrow">
+      <input type="range" id="maxPrice" min="0" max="2000" step="10" value="2000">
+      <span class="sliderval" id="maxPriceVal">£2000</span>
+    </div>
+
+    <h2>Presets</h2>
+    <div class="controls">
+      <button id="p-price">Cheapest per model</button>
+      <button id="p-batt">New battery only</button>
+      <button id="p-reset">Reset</button>
+    </div>
+
+    <button id="dl" style="width:100%;margin-top:8px">Download filtered CSV</button>
+  </div>
+
+  <div>
+    <div class="panel" id="summaryPanel"></div>
+    <div class="panel" style="margin-top:14px">
+      <h2>Best prices <span class="meta" id="countLabel"></span></h2>
+      <div class="meta" style="margin-bottom:6px" id="modeLabel">One row per model+battery+storage. Click column headers to sort.</div>
+      <div style="max-height:62vh;overflow:auto"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+</div>
+<script>window.DASH = __DATA__;</script>
+<script src="dashboard.app.js"></script>
+</body>
+</html>
