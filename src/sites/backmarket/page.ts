@@ -1,5 +1,6 @@
 import type { Page } from "playwright";
 import type { LivePickers, PickerGroup, PickerItem } from "../../types.js";
+import { labelsEqual } from "./labels.js";
 
 interface RawPickerPrice {
   amount?: string;
@@ -88,6 +89,43 @@ const READ_PICKERS_SCRIPT = `(() => {
     };
   };
 
+  const canonicalize = (groupId, label, trackingValue) => {
+    const raw = String(label || "").trim();
+    const value = trackingValue == null ? "" : String(trackingValue).trim();
+    const combined = (raw + " " + value).trim();
+    const grades = { "12": "Fair", "11": "Good", "10": "Excellent", "9": "Premium" };
+    if (groupId === "grades") {
+      if (grades[raw]) return grades[raw];
+      if (grades[value]) return grades[value];
+      const named = combined.match(/\\b(fair|good|excellent|premium)\\b/i);
+      if (named && named[1]) return named[1].charAt(0).toUpperCase() + named[1].slice(1).toLowerCase();
+      return raw;
+    }
+    if (groupId === "battery") {
+      const text = combined.toLowerCase();
+      if (/\\bnew\\b/.test(text)) return "New";
+      if (/\\bgreat\\b/.test(text)) return "Great";
+      if (/standard/.test(text)) return "Standard";
+      if (/\\bgood\\b/.test(text)) return "Good";
+      return raw;
+    }
+    if (groupId === "storage") {
+      const tb = combined.match(/([\\d.]+)\\s*tb/i);
+      if (tb && tb[1]) return tb[1] + " TB";
+      const gb = combined.match(/(\\d+)\\s*gb/i) || combined.match(/\\b(\\d{2,4})\\b/);
+      if (gb && gb[1]) return gb[1] + " GB";
+      return raw;
+    }
+    if (groupId === "dual_sim") {
+      const text = combined.toLowerCase();
+      if (text.includes("dual")) return "Dual Physical SIM";
+      if (text.includes("physical") && text.includes("esim")) return "Physical SIM + eSIM";
+      if (text.includes("esim")) return "eSIM";
+      return raw;
+    }
+    return raw;
+  };
+
   const fromDom = () => {
     const groups = groupIds
       .map((id) => {
@@ -99,8 +137,9 @@ const READ_PICKERS_SCRIPT = `(() => {
             const text = input.closest("label") ? input.closest("label").innerText : "";
             const lines = text.split("\\n").map((line) => line.trim()).filter(Boolean);
             const soldOut = /sold out/i.test(text);
+            const rawLabel = lines.find((line) => !/^£/.test(line) && !/^popular$/i.test(line)) || lines[0] || String(input.value);
             return {
-              label: lines[0] || String(input.value),
+              label: canonicalize(id, rawLabel, input.value),
               available: !input.disabled && !soldOut,
               acquirable: !soldOut,
               selected: input.checked,
@@ -132,7 +171,7 @@ const READ_PICKERS_SCRIPT = `(() => {
         sku: null,
         offerId: null,
       },
-      modelName: heading.replace(/refurbished/i, "").trim(),
+      modelName: heading.split("•")[0].replace(/refurbished/i, "").trim(),
       url: window.location.href,
     };
   };
@@ -158,9 +197,10 @@ const READ_PICKERS_SCRIPT = `(() => {
       const selected = group.items.find((item) => item.selected);
       if (selected) domSelected[group.id] = selected.label;
     }
-    const sameSelection = ["grades", "battery", "storage", "dual_sim", "color"].every(
-      (id) => !domSelected[id] || !nuxtSelected[id] || domSelected[id] === nuxtSelected[id],
-    );
+    const sameSelection = ["grades", "battery", "storage", "dual_sim", "color"].every((id) => {
+      if (!domSelected[id] || !nuxtSelected[id]) return true;
+      return canonicalize(id, String(domSelected[id]), null).toLowerCase() === canonicalize(id, String(nuxtSelected[id]), null).toLowerCase();
+    });
     if (!sameSelection) return dom;
 
     return {
@@ -195,7 +235,21 @@ const READ_PICKERS_SCRIPT = `(() => {
 })()`;
 
 export async function readLivePickers(page: Page): Promise<LivePickers> {
-  return page.evaluate(READ_PICKERS_SCRIPT) as Promise<LivePickers>;
+  let lastError: unknown = new Error("Could not read pickers.");
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      return (await page.evaluate(READ_PICKERS_SCRIPT)) as LivePickers;
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      await page.waitForLoadState("domcontentloaded").catch(() => undefined);
+      const ready = await page.waitForSelector('input[name="step-grades"]', { timeout: 20_000 }).catch(() => null);
+      if (!ready && !/execution context was destroyed|target closed|frame was detached/i.test(message)) {
+        throw error;
+      }
+    }
+  }
+  throw lastError;
 }
 
 export function selectedLabel(groups: PickerGroup[], groupId: string): string {
@@ -230,7 +284,7 @@ export async function selectPickerOption(
   timeoutMs = 20_000,
 ): Promise<void> {
   const current = await readLivePickers(page);
-  if (selectedLabel(current.groups, groupId) === item.label) {
+  if (labelsEqual(groupId, selectedLabel(current.groups, groupId), item.label)) {
     return;
   }
 
@@ -276,17 +330,40 @@ async function waitForGroupSelected(
   item: PickerItem,
   timeoutMs: number,
 ): Promise<void> {
-  await page.waitForFunction(
-    `({ groupId, label, trackingValue }) => {
+  let lastError: unknown = new Error("Selection did not settle.");
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      await page.waitForFunction(
+        `({ groupId, label, trackingValue }) => {
       const checked = document.querySelector('input[name="step-' + groupId + '"]:checked');
       if (!checked) return false;
       const text = checked.closest("label") ? checked.closest("label").innerText : "";
-      const firstLine = text.split("\\n")[0] ? text.split("\\n")[0].trim() : "";
-      if (firstLine === label) return true;
       if (trackingValue != null && String(checked.value) === String(trackingValue)) return true;
+      const firstLine = text.split("\\n")[0] ? text.split("\\n")[0].trim() : "";
+      const compact = (value) => String(value || "").trim().toLowerCase().replace(/\\s+/g, " ").replace(/ gb$/, "").replace(/ battery$/, "");
+      if (compact(firstLine) === compact(label)) return true;
+      if (groupId === "dual_sim") {
+        const hay = (firstLine + " " + String(checked.value)).toLowerCase();
+        const want = compact(label);
+        if (want.includes("dual")) return hay.includes("dual");
+        if (want.includes("physical") && want.includes("esim")) return hay.includes("physical") && hay.includes("esim") && !hay.includes("dual");
+        if (want === "esim") return hay.includes("esim") && !hay.includes("physical");
+      }
       return false;
     }`,
-    { groupId, label: item.label, trackingValue: item.trackingValue },
-    { timeout: timeoutMs },
-  );
+        { groupId, label: item.label, trackingValue: item.trackingValue },
+        { timeout: timeoutMs },
+      );
+      return;
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      if (!/execution context was destroyed|target closed|frame was detached/i.test(message)) {
+        throw error;
+      }
+      await page.waitForLoadState("domcontentloaded").catch(() => undefined);
+      await page.waitForSelector(`input[name="step-${groupId}"]`, { timeout: 15_000 }).catch(() => undefined);
+    }
+  }
+  throw lastError;
 }

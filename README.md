@@ -2,7 +2,7 @@
 
 Local Playwright crawler for refurbished iPhone configuration prices. First site: Back Market UK.
 
-It walks the product configurator in page order:
+At each branch the crawler first inventories the radios that are actually listed for the current parent path (`input[name=step-…]` values), then clicks only those options. It does not assume a global matrix of storage/SIM/colour.
 
 Condition → Battery → Storage → SIM type → Colour
 
@@ -30,6 +30,18 @@ Crawl one model (resume-safe):
 npm run crawl -- --model iphone-15
 ```
 
+Keep it alive across crashes (heartbeat + restart + skip-list):
+
+```powershell
+npm run watch -- --model iphone-15
+```
+
+Value ranking is optional and not part of a crawl:
+
+```powershell
+npm run report -- --model iphone-15
+```
+
 Smoke test (stop after 8 rows):
 
 ```powershell
@@ -53,7 +65,8 @@ Outputs land in `data/`:
 - `backmarket-iphone-15.jsonl` — source of truth, one object per line
 - `backmarket-iphone-15.csv`
 - `backmarket-iphone-15-coverage.log` — missing/unavailable branches
-- `backmarket-iphone-15-report.md`
+- `heal-state.json` — skip-list and crash signatures
+- `.heartbeat.json` — supervisor liveness
 
 ## Flags
 

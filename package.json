@@ -6,8 +6,13 @@
   "description": "Local Playwright crawler for refurbished iPhone configuration prices",
   "scripts": {
     "calibrate": "tsx src/cli.ts calibrate",
+    "watch": "tsx src/watch.ts",
     "crawl": "tsx src/cli.ts crawl",
+    "clean": "tsx src/cli.ts clean",
     "report": "tsx src/cli.ts report",
+    "probe": "tsx src/cli.ts probe",
+    "dashboard": "tsx src/dashboard.ts",
+    "dashboard:serve": "tsx src/dashboard-server.ts",
     "playwright:install": "playwright install chromium"
   },
   "engines": {

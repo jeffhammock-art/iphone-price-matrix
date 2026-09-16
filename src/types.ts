@@ -4,6 +4,7 @@ export interface ModelTarget {
   id: string;
   name: string;
   url: string;
+  storage?: string;
 }
 
 export interface SiteConfig {
@@ -12,6 +13,10 @@ export interface SiteConfig {
   localePath: string;
   currency: string;
   models: ModelTarget[];
+}
+
+export interface MultiSiteConfig {
+  sites: SiteConfig[];
 }
 
 export interface PickerPrice {
@@ -73,12 +78,31 @@ export interface CaptureRow {
   notes: string;
 }
 
+export interface InventoriedOption {
+  groupId: string;
+  value: string;
+  label: string;
+  enabled: boolean;
+  soldOut: boolean;
+  selected: boolean;
+  price: PickerPrice | null;
+}
+
+export interface ConfiguratorState {
+  groups: Record<string, InventoriedOption[]>;
+  selected: Record<string, string>;
+  selectedLabels: Record<string, string>;
+}
+
 export interface CrawlOptions {
   headed: boolean;
   resume: boolean;
   maxRows: number | null;
   delayMs: number;
+  ignoreDenylist?: boolean;
 }
+
+export type MissReason = "REDIRECTED" | "OUT_OF_STOCK" | "BLOCKED_BY_SITE" | "ERROR";
 
 export const CSV_HEADERS = [
   "Site",
@@ -98,6 +122,44 @@ export const CSV_HEADERS = [
   "URL",
   "Notes",
 ] as const;
+
+export interface RowValidation {
+  valid: boolean;
+  reasons: string[];
+}
+
+const REQUIRED_ROW_FIELDS = [
+  "model",
+  "condition",
+  "battery",
+  "storage",
+  "simType",
+  "colour",
+  "price",
+  "currency",
+  "url",
+  "warranty",
+] as const;
+
+export function validateRow(row: CaptureRow): RowValidation {
+  const reasons: string[] = [];
+  for (const field of REQUIRED_ROW_FIELDS) {
+    const value = row[field];
+    if (typeof value !== "string" || value.trim().length === 0) {
+      reasons.push(`missing ${field}`);
+    }
+  }
+  if (row.currency !== "GBP") reasons.push(`currency=${row.currency || "(empty)"} want GBP`);
+  const validBackMarket = row.url.includes("backmarket.co.uk") && row.url.includes("/en-gb/p/");
+  const validAmazon = row.url.includes("amazon.co.uk") && row.url.includes("/dp/");
+  const validRefurbed = row.url.includes("refurbed.co.uk") && row.url.includes("/p/");
+  const validMusicMagpie = row.url.includes("musicmagpie.co.uk") && row.url.includes("/store/");
+  if (row.url && !validBackMarket && !validAmazon && !validRefurbed && !validMusicMagpie) {
+    reasons.push(`url not on UK product page: ${row.url}`);
+  }
+  if (row.status === "Available" && !row.price) reasons.push("Available row without price");
+  return { valid: reasons.length === 0, reasons };
+}
 
 export function rowKey(row: Pick<CaptureRow, "site" | "model" | "battery" | "condition" | "storage" | "simType" | "colour">): string {
   return [

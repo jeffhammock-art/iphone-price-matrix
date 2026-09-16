@@ -1,38 +1,267 @@
 {
-  "site": "Back Market",
-  "origin": "https://www.backmarket.co.uk",
-  "localePath": "/en-gb",
-  "currency": "GBP",
-  "models": [
+  "sites": [
     {
-      "id": "iphone-15",
-      "name": "iPhone 15",
-      "url": "https://www.backmarket.co.uk/en-gb/p/iphone-15"
+      "site": "Back Market",
+      "origin": "https://www.backmarket.co.uk",
+      "localePath": "/en-gb",
+      "currency": "GBP",
+      "models": [
+        {
+          "id": "iphone-15",
+          "name": "iPhone 15",
+          "url": "https://www.backmarket.co.uk/en-gb/p/iphone-15"
+        },
+        {
+          "id": "iphone-13",
+          "name": "iPhone 13",
+          "url": "https://www.backmarket.co.uk/en-gb/p/iphone-13"
+        },
+        {
+          "id": "iphone-14",
+          "name": "iPhone 14",
+          "url": "https://www.backmarket.co.uk/en-gb/p/iphone-14"
+        },
+        {
+          "id": "iphone-15-pro",
+          "name": "iPhone 15 Pro",
+          "url": "https://www.backmarket.co.uk/en-gb/p/iphone-15-pro"
+        },
+        {
+          "id": "iphone-14-pro",
+          "name": "iPhone 14 Pro",
+          "url": "https://www.backmarket.co.uk/en-gb/p/iphone-14-pro"
+        },
+        {
+          "id": "iphone-13-pro",
+          "name": "iPhone 13 Pro",
+          "url": "https://www.backmarket.co.uk/en-gb/p/iphone-13-pro"
+        }
+      ]
     },
     {
-      "id": "iphone-13",
-      "name": "iPhone 13",
-      "url": "https://www.backmarket.co.uk/en-gb/p/iphone-13"
+      "site": "Amazon.co.uk",
+      "origin": "https://www.amazon.co.uk",
+      "localePath": "",
+      "currency": "GBP",
+      "models": [
+        {
+          "id": "amazon-14-128",
+          "name": "iPhone 14",
+          "storage": "128 GB",
+          "url": "https://www.amazon.co.uk/dp/B0BNLXKVNQ?th=1"
+        },
+        {
+          "id": "amazon-14-256",
+          "name": "iPhone 14",
+          "storage": "256 GB",
+          "url": "https://www.amazon.co.uk/dp/B0BNMC5PXS?th=1"
+        },
+        {
+          "id": "amazon-14-512",
+          "name": "iPhone 14",
+          "storage": "512 GB",
+          "url": "https://www.amazon.co.uk/dp/B0BNLXLFJ2?th=1"
+        },
+        {
+          "id": "amazon-15-128",
+          "name": "iPhone 15",
+          "storage": "128 GB",
+          "url": "https://www.amazon.co.uk/dp/B0CVJ23L79/?th=1"
+        },
+        {
+          "id": "amazon-15-256",
+          "name": "iPhone 15",
+          "storage": "256 GB",
+          "url": "https://www.amazon.co.uk/dp/B0CVJ7H584/?th=1"
+        },
+        {
+          "id": "amazon-15-512",
+          "name": "iPhone 15",
+          "storage": "512 GB",
+          "url": "https://www.amazon.co.uk/dp/B0CVJ247SC/?th=1"
+        },
+        {
+          "id": "amazon-13-128",
+          "name": "iPhone 13",
+          "storage": "128 GB",
+          "url": "https://www.amazon.co.uk/dp/B09MGGF9JG/?th=1"
+        },
+        {
+          "id": "amazon-13-256",
+          "name": "iPhone 13",
+          "storage": "256 GB",
+          "url": "https://www.amazon.co.uk/dp/B09MGGXMDC?th=1"
+        },
+        {
+          "id": "amazon-13-512",
+          "name": "iPhone 13",
+          "storage": "512 GB",
+          "url": "https://www.amazon.co.uk/dp/B09MJT3QCX/?th=1"
+        },
+        {
+          "id": "amazon-13-pro-128",
+          "name": "iPhone 13 Pro",
+          "storage": "128 GB",
+          "url": "https://www.amazon.co.uk/dp/B09MGF7618/?th=1"
+        },
+        {
+          "id": "amazon-13-pro-256",
+          "name": "iPhone 13 Pro",
+          "storage": "256 GB",
+          "url": "https://www.amazon.co.uk/dp/B09MGH16D1?th=1"
+        },
+        {
+          "id": "amazon-13-pro-512",
+          "name": "iPhone 13 Pro",
+          "storage": "512 GB",
+          "url": "https://www.amazon.co.uk/dp/B09MGF4NKR/?th=1"
+        },
+        {
+          "id": "amazon-13-pro-1000",
+          "name": "iPhone 13 Pro",
+          "storage": "1000 GB",
+          "url": "https://www.amazon.co.uk/dp/B09MJSDC8D/?th=1"
+        },
+        {
+          "id": "amazon-14-pro-128",
+          "name": "iPhone 14 Pro",
+          "storage": "128 GB",
+          "url": "https://www.amazon.co.uk/dp/B0BNLZ9G4N/?th=1"
+        },
+        {
+          "id": "amazon-14-pro-256",
+          "name": "iPhone 14 Pro",
+          "storage": "256 GB",
+          "url": "https://www.amazon.co.uk/dp/B0BNLYT3ML/?th=1"
+        },
+        {
+          "id": "amazon-14-pro-512",
+          "name": "iPhone 14 Pro",
+          "storage": "512 GB",
+          "url": "https://www.amazon.co.uk/dp/B0BNM2KVHP/?th=1"
+        },
+        {
+          "id": "amazon-14-pro-1000",
+          "name": "iPhone 14 Pro",
+          "storage": "1000 GB",
+          "url": "https://www.amazon.co.uk/dp/B0BNM1CH8J/?th=1"
+        },
+        {
+          "id": "amazon-15-pro-128",
+          "name": "iPhone 15 Pro",
+          "storage": "128 GB",
+          "url": "https://www.amazon.co.uk/dp/B0CVJ8QRF6/?th=1"
+        },
+        {
+          "id": "amazon-15-pro-256",
+          "name": "iPhone 15 Pro",
+          "storage": "256 GB",
+          "url": "https://www.amazon.co.uk/dp/B0CVJS2V8B/?th=1"
+        },
+        {
+          "id": "amazon-15-pro-512",
+          "name": "iPhone 15 Pro",
+          "storage": "512 GB",
+          "url": "https://www.amazon.co.uk/dp/B0CVJPFCW5/?th=1"
+        },
+        {
+          "id": "amazon-15-pro-1000",
+          "name": "iPhone 15 Pro",
+          "storage": "1000 GB",
+          "url": "https://www.amazon.co.uk/dp/B0CVZS8NP5/?th=1"
+        }
+      ]
     },
     {
-      "id": "iphone-14",
-      "name": "iPhone 14",
-      "url": "https://www.backmarket.co.uk/en-gb/p/iphone-14"
+      "site": "Refurbed.co.uk",
+      "origin": "https://www.refurbed.co.uk",
+      "localePath": "",
+      "currency": "GBP",
+      "models": [
+        {
+          "id": "iphone-13",
+          "name": "iPhone 13",
+          "url": "https://www.refurbed.co.uk/p/iphone-13/"
+        },
+        {
+          "id": "iphone-13-pro",
+          "name": "iPhone 13 Pro",
+          "url": "https://www.refurbed.co.uk/p/iphone-13-pro/"
+        },
+        {
+          "id": "iphone-14",
+          "name": "iPhone 14",
+          "url": "https://www.refurbed.co.uk/p/iphone-14/"
+        },
+        {
+          "id": "iphone-14-pro",
+          "name": "iPhone 14 Pro",
+          "url": "https://www.refurbed.co.uk/p/iphone-14-pro/"
+        },
+        {
+          "id": "iphone-15",
+          "name": "iPhone 15",
+          "url": "https://www.refurbed.co.uk/p/iphone-15/"
+        },
+        {
+          "id": "iphone-15-pro",
+          "name": "iPhone 15 Pro",
+          "url": "https://www.refurbed.co.uk/p/iphone-15-pro/"
+        }
+      ]
     },
     {
-      "id": "iphone-15-pro",
-      "name": "iPhone 15 Pro",
-      "url": "https://www.backmarket.co.uk/en-gb/p/iphone-15-pro"
-    },
-    {
-      "id": "iphone-14-pro",
-      "name": "iPhone 14 Pro",
-      "url": "https://www.backmarket.co.uk/en-gb/p/iphone-14-pro"
-    },
-    {
-      "id": "iphone-13-pro",
-      "name": "iPhone 13 Pro",
-      "url": "https://www.backmarket.co.uk/en-gb/p/iphone-13-pro"
+      "site": "musicMagpie",
+      "origin": "https://www.musicmagpie.co.uk",
+      "localePath": "",
+      "currency": "GBP",
+      "models": [
+        {
+          "id": "iphone-13",
+          "name": "iPhone 13",
+          "url": "https://www.musicmagpie.co.uk/store/category/mobile-phones/apple/iphone-13/?filter=purchase_type:buy&filter=network:UNLOCKED&per-page=128"
+        },
+        {
+          "id": "iphone-14",
+          "name": "iPhone 14",
+          "url": "https://www.musicmagpie.co.uk/store/category/mobile-phones/apple/iphone-14/?filter=purchase_type:buy&filter=network:UNLOCKED&per-page=128"
+        },
+        {
+          "id": "iphone-15",
+          "name": "iPhone 15",
+          "url": "https://www.musicmagpie.co.uk/store/category/mobile-phones/apple/iphone-15/?filter=purchase_type:buy&filter=network:UNLOCKED&per-page=128"
+        },
+        {
+          "id": "iphone-13-pro",
+          "name": "iPhone 13 Pro",
+          "url": "https://www.musicmagpie.co.uk/store/category/mobile-phones/apple/iphone-13-pro/?filter=purchase_type:buy&filter=network:UNLOCKED&per-page=128"
+        },
+        {
+          "id": "iphone-14-pro",
+          "name": "iPhone 14 Pro",
+          "url": "https://www.musicmagpie.co.uk/store/category/mobile-phones/apple/iphone-14-pro/?filter=purchase_type:buy&filter=network:UNLOCKED&per-page=128"
+        },
+        {
+          "id": "iphone-15-pro",
+          "name": "iPhone 15 Pro",
+          "url": "https://www.musicmagpie.co.uk/store/category/mobile-phones/apple/iphone-15-pro/?filter=purchase_type:buy&filter=network:UNLOCKED&per-page=128"
+        },
+        {
+          "id": "iphone-13-pro-max",
+          "name": "iPhone 13 Pro Max",
+          "url": "https://www.musicmagpie.co.uk/store/category/mobile-phones/apple/iphone-13-pro-max/?filter=purchase_type:buy&filter=network:UNLOCKED&per-page=128"
+        },
+        {
+          "id": "iphone-14-pro-max",
+          "name": "iPhone 14 Pro Max",
+          "url": "https://www.musicmagpie.co.uk/store/category/mobile-phones/apple/iphone-14-pro-max/?filter=purchase_type:buy&filter=network:UNLOCKED&per-page=128"
+        },
+        {
+          "id": "iphone-15-pro-max",
+          "name": "iPhone 15 Pro Max",
+          "url": "https://www.musicmagpie.co.uk/store/category/mobile-phones/apple/iphone-15-pro-max/?filter=purchase_type:buy&filter=network:UNLOCKED&per-page=128"
+        }
+      ]
     }
   ]
 }
