@@ -35,6 +35,18 @@
           "id": "iphone-13-pro",
           "name": "iPhone 13 Pro",
           "url": "https://www.backmarket.co.uk/en-gb/p/iphone-13-pro"
+        },
+        {
+          "id": "macbook-pro-m1",
+          "name": "MacBook Pro M1",
+          "product": "macbook",
+          "url": "https://www.backmarket.co.uk/en-gb/p/macbook-pro-m1-series",
+          "filters": {
+            "minScreenInches": 14,
+            "minMemoryGb": 16,
+            "minStorageGb": 512,
+            "chipPattern": "M\\d"
+          }
         }
       ]
     },

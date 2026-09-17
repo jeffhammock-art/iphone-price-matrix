@@ -1,10 +1,19 @@
 export type CaptureStatus = "Available" | "Out of stock";
 
+export interface ProductFilters {
+  minScreenInches?: number;
+  minMemoryGb?: number;
+  minStorageGb?: number;
+  chipPattern?: string;
+}
+
 export interface ModelTarget {
   id: string;
   name: string;
   url: string;
   storage?: string;
+  product?: string;
+  filters?: ProductFilters;
 }
 
 export interface SiteConfig {
@@ -76,6 +85,11 @@ export interface CaptureRow {
   sku: string;
   url: string;
   notes: string;
+  product?: string;
+  chip?: string;
+  screen?: string;
+  memory?: string;
+  keyboard?: string;
 }
 
 export interface InventoriedOption {
@@ -121,6 +135,11 @@ export const CSV_HEADERS = [
   "SKU",
   "URL",
   "Notes",
+  "Product",
+  "Chip",
+  "Screen",
+  "Memory",
+  "Keyboard",
 ] as const;
 
 export interface RowValidation {
@@ -138,7 +157,6 @@ const REQUIRED_ROW_FIELDS = [
   "price",
   "currency",
   "url",
-  "warranty",
 ] as const;
 
 export function validateRow(row: CaptureRow): RowValidation {
@@ -161,7 +179,10 @@ export function validateRow(row: CaptureRow): RowValidation {
   return { valid: reasons.length === 0, reasons };
 }
 
-export function rowKey(row: Pick<CaptureRow, "site" | "model" | "battery" | "condition" | "storage" | "simType" | "colour">): string {
+export function rowKey(
+  row: Pick<CaptureRow, "site" | "model" | "battery" | "condition" | "storage" | "simType" | "colour"> &
+    Partial<Pick<CaptureRow, "screen" | "memory">>,
+): string {
   return [
     row.site,
     row.model,
@@ -170,6 +191,8 @@ export function rowKey(row: Pick<CaptureRow, "site" | "model" | "battery" | "con
     row.storage,
     row.simType,
     row.colour,
+    row.screen ?? "",
+    row.memory ?? "",
   ].join("|");
 }
 
@@ -191,6 +214,11 @@ export function toCsvLine(row: CaptureRow): string {
     row.sku,
     row.url,
     row.notes,
+    row.product ?? "",
+    row.chip ?? "",
+    row.screen ?? "",
+    row.memory ?? "",
+    row.keyboard ?? "",
   ];
   return values.map(csvEscape).join(",");
 }

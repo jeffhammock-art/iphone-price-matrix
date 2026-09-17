@@ -3,6 +3,18 @@ import type { ConfiguratorState, InventoriedOption } from "../../types.js";
 
 const GROUP_ORDER = ["grades", "battery", "storage", "dual_sim", "color"] as const;
 
+// Mac configurator dependency order (DOM order on the MacBook page).
+// keyboard_type_language is single-option and excluded from traversal — its
+// value is still recorded from the inventory state at capture time.
+export const MAC_GROUP_ORDER = [
+  "screen_size",
+  "grades",
+  "processor_type_and_graphic_card",
+  "memory",
+  "storage",
+  "color",
+] as const;
+
 // Single source of truth for labels lives in ./labels.ts (TS side).
 // The string below is its injected-JS mirror — keep behaviour identical.
 // Any change to canonicalize() in labels.ts must be ported here.
@@ -41,12 +53,42 @@ const CANONICALIZE_JS = `
       if (text.includes("esim")) return "eSIM";
       return raw;
     }
+    if (groupId === "screen_size") {
+      const num = combined.match(/(\\d+(?:\\.\\d+)?)/);
+      if (num && num[1]) {
+        const inches = Number(num[1]);
+        return (Number.isInteger(inches) ? String(inches) : inches.toFixed(1)) + '"';
+      }
+      return raw;
+    }
+    if (groupId === "memory") {
+      const gb = combined.match(/(\\d+)\\s*gb/i) || combined.match(/\\b(\\d{1,3})\\b/);
+      if (gb && gb[1]) return gb[1] + " GB";
+      return raw;
+    }
+    if (groupId === "processor_type_and_graphic_card") {
+      const chip = combined.match(/Apple\\s+M\\d+(?:\\s*Pro|\\s*Max|\\s*Ultra)*/i);
+      if (chip && chip[0]) return chip[0].replace(/\\s+/g, " ").trim();
+      return raw;
+    }
+    if (groupId === "keyboard_type_language") {
+      return raw;
+    }
     return raw;
   };
 `;
 
 const INVENTORY_SCRIPT = `(() => {
-  const groupIds = ["grades", "battery", "storage", "dual_sim", "color"];
+  // Discover step groups from the DOM itself so the same script serves both
+  // the iPhone configurator (grades/battery/storage/dual_sim/color) and the
+  // Mac configurator (screen_size/grades/processor/memory/storage/color/...).
+  // DOM order = parent-before-child dependency order on both page types.
+  const groupIds = [];
+  const seenGroups = {};
+  for (const input of [...document.querySelectorAll('input[name^="step-"]')]) {
+    const id = String(input.name || "").replace(/^step-/, "");
+    if (id && !seenGroups[id]) { seenGroups[id] = true; groupIds.push(id); }
+  }
   const parseGbp = (text) => {
     if (!text) return null;
     const match = String(text).replaceAll(/\\s/g, "").match(/£(\\d[\\d,]*(?:\\.\\d{2})?)/);
@@ -112,7 +154,7 @@ const EMPTY_STATE: ConfiguratorState = { groups: {}, selected: {}, selectedLabel
 
 export async function configuratorReady(page: Page, timeoutMs = 20_000): Promise<boolean> {
   try {
-    await page.waitForSelector('input[name="step-grades"]', { state: "attached", timeout: timeoutMs });
+    await page.waitForSelector('input[name^="step-"]', { state: "attached", timeout: timeoutMs });
     return true;
   } catch {
     return false;
@@ -310,14 +352,18 @@ export async function selectByValueDetailed(
   }
 }
 
-export async function ensureValues(page: Page, path: Record<string, string>): Promise<boolean> {
+export async function ensureValues(
+  page: Page,
+  path: Record<string, string>,
+  groupOrder: readonly string[] = GROUP_ORDER,
+): Promise<boolean> {
   try {
     if (!(await configuratorReady(page, 5_000))) return false;
     // One evaluate diffs the whole path; only mismatched groups get clicked
     // (was 4-5 evaluate round-trips per restore when the path already held).
     const snap = await readSelectedSnapshot(page);
     if (!snap || snap.count === 0) return false;
-    const mismatches = GROUP_ORDER.filter((groupId) => {
+    const mismatches = groupOrder.filter((groupId) => {
       const wanted = path[groupId];
       return wanted && snap.selected[groupId] !== wanted;
     });

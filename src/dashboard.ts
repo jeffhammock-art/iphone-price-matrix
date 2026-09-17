@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -33,11 +33,21 @@ interface RawRow {
   url: string;
   notes: string;
   source: string;
+  product: string;
+  chip: string;
+  screen: string;
+  memory: string;
+  keyboard: string;
 }
 
 function storageGb(label: string): number {
   const tb = label.match(/([\d.]+)\s*TB/i);
   if (tb) return Math.round(Number(tb[1]) * 1024);
+  const gb = label.match(/([\d.]+)\s*GB/i);
+  return gb ? Number(gb[1]) : 0;
+}
+
+function memoryGb(label: string): number {
   const gb = label.match(/([\d.]+)\s*GB/i);
   return gb ? Number(gb[1]) : 0;
 }
@@ -97,6 +107,7 @@ async function loadRows(): Promise<RawRow[]> {
       const g = (name: string) => (cells[r][idx(name)] ?? "").trim();
       const price = g("Price");
       if (!price) continue;
+      const macRow = Boolean(g("Chip") || g("Screen") || g("Memory")) || /macbook/i.test(g("Model"));
             out.push({
         capturedAt: g("DateTime"),
         model: normalizeModel(g("Model")),
@@ -111,6 +122,11 @@ async function loadRows(): Promise<RawRow[]> {
         warranty: g("Warranty"),
         url: g("URL"),
         notes: g("Notes"),
+        chip: g("Chip"),
+        screen: g("Screen"),
+        memory: g("Memory"),
+        keyboard: g("Keyboard"),
+        product: macRow ? "macbook" : "iphone",
         source: file.startsWith("amazon-") ? "Amazon.co.uk"
         : file.startsWith("refurbed-") ? "Refurbed.co.uk"
         : file.startsWith("musicmagpie-") ? "musicMagpie"
@@ -131,13 +147,18 @@ async function main(): Promise<void> {
   const enriched = rows.map((r) => {
     const gb = storageGb(r.storage);
     const price = Number(r.price) || 0;
-    return { ...r, gb, price, perGb: gb > 0 ? price / gb : 0 };
+    const memGb = memoryGb(r.memory);
+    return { ...r, gb, price, perGb: gb > 0 ? price / gb : 0, memGb, perGbRam: memGb > 0 ? price / memGb : 0 };
   });
   const json = JSON.stringify(enriched).replace(/</g, "\\u003c");
   const templatePath = join(rootDir, "src", "dashboard.template.html");
   const template = await readFile(templatePath, "utf8");
   const out = join(dataDir, "iphone-dashboard.html");
   await writeFile(out, template.replace("__DATA__", json), "utf8");
+  // The template references dashboard.app.js with a relative path; without
+  // this copy a file:// open of data/iphone-dashboard.html 404s the script
+  // and renders nothing. The dev server masks the bug by serving src/.
+  await copyFile(join(rootDir, "src", "dashboard.app.js"), join(dataDir, "dashboard.app.js"));
   console.log(`Dashboard written: ${out} (${enriched.length} units)`);
 }
 

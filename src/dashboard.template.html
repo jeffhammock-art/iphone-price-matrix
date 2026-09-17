@@ -45,16 +45,24 @@
   #refreshData:disabled { opacity:.6; cursor:wait; }
   .note { color:var(--muted); font-size:12px; }
   .empty { color:var(--muted); padding:20px; }
+  .tabs { display:flex; gap:6px; margin-top:8px; }
+  .tabbtn { background:var(--bg); border:1px solid #2a3250; border-radius:8px 8px 0 0; padding:6px 14px; font-size:13px; }
+  .tabbtn.on { border-color:var(--accent); color:var(--accent); background:var(--panel); }
 </style>
 </head>
 <body>
 <header>
-  <h1>iPhone Price Matrix — best-value picker</h1>
+  <h1>Price Matrix — best-value picker</h1>
     <p>Pick your requirements (models, battery condition, minimum storage). Results show the lowest price for each unique configuration, ignoring colour and SIM options. Data embedded from the last clean crawl.</p>
+  <div class="tabs">
+    <button id="tab-iphone" class="tabbtn on">iPhones</button>
+    <button id="tab-mac" class="tabbtn">MacBooks</button>
+  </div>
   <div class="controls" style="margin-top:6px"><button id="refreshData" style="width:auto">Refresh data</button></div>
 </header>
 <div class="layout">
   <div class="panel">
+    <div id="iphoneFilters">
     <h2>Source</h2>
     <div class="chipwrap" id="f-source"></div>
 
@@ -81,6 +89,42 @@
       <button id="p-price">Cheapest per model</button>
       <button id="p-batt">New battery only</button>
       <button id="p-reset">Reset</button>
+    </div>
+    </div>
+
+    <div id="macFilters" style="display:none">
+      <h2>Source</h2>
+      <div class="chipwrap" id="m-source"></div>
+
+      <h2>Models</h2>
+      <div class="chipwrap" id="m-model"></div>
+
+      <h2>Screen</h2>
+      <div class="chipwrap" id="m-screen"></div>
+
+      <h2>Chip</h2>
+      <div class="chipwrap" id="m-chip"></div>
+
+      <h2>Memory</h2>
+      <div class="chipwrap" id="m-memory"></div>
+
+      <h2>Storage</h2>
+      <div class="chipwrap" id="m-storage"></div>
+
+      <h2>Condition</h2>
+      <div class="chipwrap" id="m-condition"></div>
+
+      <h2>Maximum price: <span id="mMaxPriceLabel">£3000</span></h2>
+      <div class="sliderrow">
+        <input type="range" id="mMaxPrice" min="0" max="3000" step="10" value="3000">
+        <span class="sliderval" id="mMaxPriceVal">£3000</span>
+      </div>
+
+      <h2>Presets</h2>
+      <div class="controls">
+        <button id="m-price">Cheapest per model</button>
+        <button id="m-reset">Reset</button>
+      </div>
     </div>
 
     <button id="dl" style="width:100%;margin-top:8px">Download filtered CSV</button>

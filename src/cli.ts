@@ -6,6 +6,7 @@ import type { Page } from "playwright";
 import type { ModelTarget, MultiSiteConfig, SiteConfig } from "./types.js";
 import { rowKey } from "./types.js";
 import { calibrateModel, crawlModel, probeModel, withBrowser, withBrowserContext } from "./sites/backmarket/crawl.js";
+import { crawlMacModel } from "./sites/backmarket/mac.js";
 import { crawlAmazonModel } from "./sites/amazon/crawl.js";
 import { crawlRefurbedModel } from "./sites/refurbed/crawl.js";
 import { crawlMusicMagpieModel } from "./sites/musicmagpie/crawl.js";
@@ -99,7 +100,14 @@ async function main(): Promise<void> {
     console.log(`\n[${site.site}] [${model.name}] === Crawl (${seen.size} rows already saved) ===`);
 
     let result;
-    if (isAmazon) {
+    if (model.product === "macbook") {
+      result = await crawlMacModel(page, model, dataDir, {
+        headed,
+        resume: !values["no-resume"],
+        maxRows,
+        delayMs,
+      });
+    } else if (isAmazon) {
       result = await crawlAmazonModel(page, model, dataDir, { headed, delayMs });
     } else if (sitePrefix === "refurbed") {
       result = await crawlRefurbedModel(page, model, site, dataDir, { headed, delayMs });

@@ -1,10 +1,10 @@
 # iPhone price matrix
 
-Local Playwright crawler for refurbished iPhone configuration prices across multiple UK retailers.
+Local Playwright crawler for refurbished iPhone and MacBook configuration prices across multiple UK retailers.
 
 Sites:
 
-- **Back Market** — iPhone 13/14/15 and their Pro variants, configured via the on-page configurator (Condition → Battery → Storage → SIM type → Colour).
+- **Back Market** — iPhone 13/14/15 and their Pro variants, configured via the on-page configurator (Condition → Battery → Storage → SIM type → Colour). Also the MacBook Pro M1 page, whose configurator groups are Screen size → Condition → Chip → Memory → Storage → Colour.
 - **Amazon.co.uk** — specific iPhone models and storage sizes via product pages.
 - **Refurbed.co.uk** — iPhone 13/14/15 and Pro variants.
 - **musicMagpie.co.uk** — iPhone models via category search pages.
@@ -85,8 +85,28 @@ node full-refresh.cjs
 
 ## Running inside Docker
 
+Docker gives you a portable, reproducible environment (same Node version, Playwright, Chromium) so the crawler behaves the same on any machine. The image does **not** bake in `data/` or `config/` — those are mounted at runtime.
+
+**Keeping the headed option is the point.** The crawler is designed to run headed (a real Chrome window), because Back Market blocks headless browsers (HTTP 403). Docker does **not** change that — the whole point is you can keep running headed.
+
+On Windows with Docker Desktop, a Linux container does **not** have access to your Windows desktop display. That means:
+
+- you cannot run the crawler headed inside Docker on Windows and see a Chrome window on your desktop. The container cannot open a window on the host.
+- if you run the crawler headed inside Docker, the browser starts but no window appears, and pages that need a real browser context (Back Market) will not behave as expected.
+
+So Docker here is about portability and environment — same tools, same version, same Chromium build on another machine — not about changing the headed/headless tradeoff. To actually use the headed option you need a machine that can show a Chrome window, and on that machine you run headed (either directly on the host, or inside Docker with a display set up inside the container — optional, not part of normal use).
+
+The practical options:
+
+- **On your current machine (or any machine with a display):** run the crawler directly on the host, not inside Docker. `npm run crawl -- --model iphone-15` opens a real Chrome window and works with Back Market.
+- **On another machine with a display:** use the Docker image for a reproducible environment, then run headed on that machine (outside Docker, or with a display inside the container). Docker gets you the same environment; the machine's display gets you the headed option.
+- **On a machine without a display (or in Docker without a display):** you lose the headed option. Docker does not provide a display — you still need a machine with a display and either run headed outside Docker, or set up a display inside the container.
+
 ```bash
+# Build the image
 docker build -t iphone-price-matrix .
+
+# Run with Docker (mounts your data/ and config/)
 docker compose run --rm crawler crawl --model iphone-15
 docker compose run --rm crawler crawl --site "Back Market" --all
 docker compose run --rm crawler watch --model iphone-15
@@ -97,12 +117,6 @@ Mounts:
 - `./data` → `/app/data` — scraped data (JSONL, CSV, logs) and the Chrome profile. Persist this across runs so the profile trust is retained.
 - `./config` → `/app/config` — model configuration (public product URLs).
 
-Important:
-
-- The Docker image defaults to the same headed Chrome as the host. A container has no display by default, so headed Chrome inside the container will not render to your desktop. To run inside Docker you either:
-  - pass `--headless` and test whether your target site allows it (Back Market currently returns 403 to headless), or
-  - set up Xvfb / VNC inside the container, or
-  - run the same commands directly on the host when you need a real Chrome window.
 - Back Market blocks headless browsers and often shows a short bot check on first run. The crawler reuses `data/.chrome-profile` so later runs usually skip that check. If you mount an existing `data/` folder that already contains a trusted `.chrome-profile`, that trust carries over. Without it, expect a bot check on first run.
 - The image does not bake in `data/` or `config/` — these are mounted at runtime because they're user-specific or change over time.
 
@@ -116,9 +130,15 @@ Important:
 | `--headed` | on | show Chrome. Back Market blocks headless (403), so this is the default |
 | `--headless` | off | force headless; expected to fail on Back Market |
 | `--max-rows` | none | stop after N saved rows (useful for a first watch) |
+| `--delay` | 450 | milliseconds to wait after each selection |
+| `--no-resume` | off | ignore the existing JSONL file and recapture (still appends; delete `data/*.jsonl` to start clean) |
+| `--concurrency` | 1 | parallel workers for `--all` (Back Market only; shared Chrome context) |
+
 ## Flag reference (per-site models)
 
-Back Market models: `iphone-15`, `iphone-13`, `iphone-14`, `iphone-15-pro`, `iphone-14-pro`, `iphone-13-pro`
+Back Market models: `iphone-15`, `iphone-13`, `iphone-14`, `iphone-15-pro`, `iphone-14-pro`, `iphone-13-pro`, `macbook-pro-m1`
+
+The `macbook-pro-m1` model applies config-driven filters (`config/models.json` → `filters`) at inventory time — branches that fail your criteria are never clicked: minimum screen size (≥ 14"), minimum memory (≥ 16 GB), minimum storage (≥ 512 GB), and an M-series chip pattern. Adjust those values to widen or narrow the crawl.
 
 Amazon.co.uk models: `amazon-14-128`, `amazon-14-256`, `amazon-14-512`, `amazon-15-128`, `amazon-15-256`, `amazon-15-512`, `amazon-13-128`, `amazon-13-256`, `amazon-13-512`, `amazon-13-pro-128`, `amazon-13-pro-256`, `amazon-13-pro-512`
 
@@ -147,4 +167,6 @@ Outputs land in `data/`:
 - `backmarket-{model}-coverage.log` — missing/unavailable branches
 - `heal-state.json` — skip-list and crash signatures (used by `watch`)
 - `.heartbeat.json` — supervisor liveness (used by `watch`)
-- `iphone-dashboard.html` — self-contained interactive dashboard over all clean CSVs (built by `npm run dashboard`)
+- `iphone-dashboard.html` — self-contained interactive dashboard over all clean CSVs (built by `npm run dashboard`). Two tabs: **iPhones** (battery/condition/SIM filters, value = price per GB of storage) and **MacBooks** (screen/chip/memory/storage filters, value = price per GB of RAM). Built via `npm run dashboard`; opens by double-click.
+
+MacBook rows carry `product=macbook` plus `Chip`, `Screen`, `Memory`, `Keyboard` columns; iPhone rows keep the original schema. Both live in the same clean CSV/JSONL pipeline and the same dashboard file.

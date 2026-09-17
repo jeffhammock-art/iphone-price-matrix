@@ -43,6 +43,34 @@ export function canonicalize(groupId: string, label: string, trackingValue?: str
     return raw;
   }
 
+  if (groupId === "screen_size") {
+    // "13.0" / "14.0" / "13" → '13"', '14"'
+    const num = combined.match(/(\d+(?:\.\d+)?)/);
+    if (num?.[1]) {
+      const inches = Number(num[1]);
+      return `${Number.isInteger(inches) ? inches : inches.toFixed(1)}"`;
+    }
+    return raw;
+  }
+
+  if (groupId === "memory") {
+    // "8" / "16 GB" → "8 GB", "16 GB"
+    const gb = combined.match(/(\d+)\s*gb/i) || combined.match(/\b(\d{1,3})\b/);
+    if (gb?.[1]) return `${gb[1]} GB`;
+    return raw;
+  }
+
+  if (groupId === "processor_type_and_graphic_card") {
+    // "Apple M1 8-core - 8-core GPU" → "Apple M1"
+    const chip = combined.match(/Apple\s+M\d+(?:\s*Pro|\s*Max|\s*Ultra)*/i);
+    if (chip?.[0]) return chip[0].replace(/\s+/g, " ").trim();
+    return raw;
+  }
+
+  if (groupId === "keyboard_type_language") {
+    return raw; // e.g. "QWERTY - English" — kept verbatim
+  }
+
   return raw;
 }
 

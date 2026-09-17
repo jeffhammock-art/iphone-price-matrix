@@ -13,7 +13,18 @@ const STATE = {
   perModel: false,
   results: [],
   sortBy: 'price',
-  sortDir: 'asc'
+  sortDir: 'asc',
+  tab: 'iphone',
+  // MacBook tab state
+  macSelectedSources: new Set(),
+  macSelectedModels: new Set(),
+  macSelectedScreens: new Set(),
+  macSelectedChips: new Set(),
+  macSelectedMemories: new Set(),
+  macSelectedStorages: new Set(),
+  macSelectedConditions: new Set(),
+  macMaxPrice: 3000,
+  macPerModel: false
 };
 
 const BATTERY_ORDER = ['Good', 'Standard', 'Great', 'New'];
@@ -51,6 +62,18 @@ function storageGb(label) {
   const gb = label && label.match(/([0-9.]+)\s*GB/i);
   if (gb) return Number(gb[1]);
   return 0;
+}
+
+function screenInches(label) {
+  const m = label && label.match(/([\d.]+)\s*"/);
+  if (m) return Number(m[1]);
+  const n = label && label.match(/([\d.]+)/);
+  return n ? Number(n[1]) : 0;
+}
+
+function memoryGbOf(label) {
+  const m = label && label.match(/([\d.]+)\s*GB/i);
+  return m ? Number(m[1]) : 0;
 }
 
 function buildChipGroup(containerId, items, selected, multi,onChange) {
@@ -100,6 +123,21 @@ function applySort() {
       case 'condition':
         cmp = (CONDITION_ORDER.indexOf(a.condition) - CONDITION_ORDER.indexOf(b.condition));
         return cmp * dir;
+      case 'screen':
+        cmp = screenInches(a.screen) - screenInches(b.screen);
+        if (cmp !== 0) return cmp * dir;
+        return (Number(a.price) - Number(b.price)) * dir;
+      case 'chip':
+        cmp = (a.chip || '').localeCompare(b.chip || '');
+        if (cmp !== 0) return cmp * dir;
+        return (screenInches(a.screen) - screenInches(b.screen)) * dir;
+      case 'memory':
+        cmp = memoryGbOf(a.memory) - memoryGbOf(b.memory);
+        if (cmp !== 0) return cmp * dir;
+        return (Number(a.price) - Number(b.price)) * dir;
+      case 'perGbRam':
+        cmp = (a.perGbRam || 0) - (b.perGbRam || 0);
+        return cmp * dir;
       case 'price':
         cmp = Number(a.price) - Number(b.price);
         return cmp * dir;
@@ -119,6 +157,7 @@ function applySort() {
 }
 
 function findBestResults() {
+  if (STATE.tab === 'mac') { findBestMac(); return; }
   const candidates = STATE.units.filter(row => {
     if (row.status !== 'Available') return false;
     if (!row.price || Number(row.price) <= 0) return false;
@@ -144,7 +183,37 @@ function findBestResults() {
   applySort();
 }
 
+function findBestMac() {
+  const candidates = STATE.units.filter(u => u.product === 'macbook').filter(row => {
+    if (row.status !== 'Available') return false;
+    if (!row.price || Number(row.price) <= 0) return false;
+    if (Number(row.price) > STATE.macMaxPrice) return false;
+    if (STATE.macSelectedSources.size > 0 && !STATE.macSelectedSources.has(row.source)) return false;
+    if (STATE.macSelectedModels.size > 0 && !STATE.macSelectedModels.has(row.model)) return false;
+    if (STATE.macSelectedScreens.size > 0 && !STATE.macSelectedScreens.has(row.screen)) return false;
+    if (STATE.macSelectedChips.size > 0 && !STATE.macSelectedChips.has(row.chip)) return false;
+    if (STATE.macSelectedMemories.size > 0 && !STATE.macSelectedMemories.has(row.memory)) return false;
+    if (STATE.macSelectedStorages.size > 0 && !STATE.macSelectedStorages.has(row.storage)) return false;
+    if (STATE.macSelectedConditions.size > 0 && !STATE.macSelectedConditions.has(row.condition)) return false;
+    return true;
+  });
+
+  const groups = new Map();
+  candidates.forEach(row => {
+    const key = STATE.macPerModel
+      ? row.model
+      : `${row.model}|${row.screen}|${row.memory}|${row.storage}|${row.condition}`;
+    if (!groups.has(key) || Number(row.price) < Number(groups.get(key).price)) {
+      groups.set(key, row);
+    }
+  });
+
+  STATE.results = Array.from(groups.values());
+  applySort();
+}
+
 function renderResults() {
+  if (STATE.tab === 'mac') { renderMacResults(); return; }
   const tbody = document.querySelector('#tbl tbody');
   const thead = document.querySelector('#tbl thead');
   tbody.innerHTML = '';
@@ -207,7 +276,112 @@ function renderResults() {
     : '<div class="stat">No units match your criteria</div>';
 }
 
+function renderMacResults() {
+  const tbody = document.querySelector('#tbl tbody');
+  const thead = document.querySelector('#tbl thead');
+  tbody.innerHTML = '';
+
+  const columns = [
+    { key: 'source', label: 'Source', cls: '' },
+    { key: 'model', label: 'Model', cls: 'l' },
+    { key: 'screen', label: 'Screen', cls: 'num' },
+    { key: 'chip', label: 'Chip', cls: '' },
+    { key: 'memory', label: 'Memory', cls: 'num' },
+    { key: 'storage', label: 'Storage', cls: 'num' },
+    { key: 'condition', label: 'Condition', cls: '' },
+    { key: 'colour', label: 'Colour', cls: '' },
+    { key: 'price', label: 'Price (£)', cls: 'num' },
+    { key: 'perGbRam', label: '£/GB RAM', cls: 'num' },
+    { key: 'capturedAt', label: 'Retrieved', cls: '' },
+    { key: 'url', label: 'Link', cls: 'l' }
+  ];
+
+  thead.innerHTML = '<tr>' + columns.map(col => {
+    const active = STATE.sortBy === col.key;
+    const dirClass = active ? (STATE.sortDir === 'asc' ? 'sort-asc' : 'sort-desc') : '';
+    return `<th data-sort="${col.key}" class="${dirClass}">${col.label}</th>`;
+  }).join('') + '</tr>';
+
+  thead.querySelectorAll('th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.getAttribute('data-sort');
+      if (STATE.sortBy === key) {
+        STATE.sortDir = STATE.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        STATE.sortBy = key;
+        STATE.sortDir = 'asc';
+      }
+      applySort();
+      renderResults();
+    });
+  });
+
+  STATE.results.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = [
+      `<td>${row.source}</td>`,
+      `<td class="l">${row.model}</td>`,
+      `<td class="num">${row.screen || ''}</td>`,
+      `<td>${row.chip || ''}</td>`,
+      `<td class="num">${row.memory || ''}</td>`,
+      `<td class="num">${row.storage}</td>`,
+      `<td>${row.condition}</td>`,
+      `<td>${row.colour}</td>`,
+      `<td class="num">£${Number(row.price).toFixed(2)}</td>`,
+      `<td class="num">${row.perGbRam ? '£' + row.perGbRam.toFixed(2) : '-'}</td>`,
+      `<td class="l">${row.capturedAt || ''}</td>`,
+      `<td class="l">${row.url ? `<a href="${row.url}" target="_blank">link</a>` : ''}</td>`
+    ].join('');
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('countLabel').textContent = `(${STATE.results.length} best results)`;
+  const summary = document.getElementById('summaryPanel');
+  const sourceCounts = {};
+  STATE.results.forEach(r => { sourceCounts[r.source] = (sourceCounts[r.source] || 0) + 1; });
+  const sourceSummary = Object.entries(sourceCounts).map(([s, c]) => `${c} ${s}`).join(', ');
+  summary.innerHTML = STATE.results.length > 0
+    ? `<div class="stat"><b>Showing:</b> ${STATE.results.length} best prices across ${new Set(STATE.results.map(r => r.model)).size} Mac models (${sourceSummary}). Value = price per GB of RAM.</div>`
+    : '<div class="stat">No MacBook data yet — run: npm run crawl -- --site "Back Market" --model macbook-pro-m1</div>';
+}
+
+function exportCsvMac() {
+  const headers = ['Source', 'Model', 'Screen', 'Chip', 'Memory', 'Storage', 'Condition', 'Colour', 'Price', 'Currency', 'Status', 'Retrieved', 'URL', 'Notes'];
+  const lines = [headers.join(',')];
+  STATE.results.forEach(row => {
+    lines.push([
+      row.source, row.model, row.screen || '', row.chip || '', row.memory || '', row.storage,
+      row.condition, row.colour, row.price, row.currency, row.status,
+      row.capturedAt || '', row.url, row.notes || ''
+    ].map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'macbook-dashboard-results.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function switchTab(tab) {
+  STATE.tab = tab;
+  document.getElementById('tab-iphone').classList.toggle('on', tab === 'iphone');
+  document.getElementById('tab-mac').classList.toggle('on', tab === 'mac');
+  document.getElementById('iphoneFilters').style.display = tab === 'iphone' ? '' : 'none';
+  document.getElementById('macFilters').style.display = tab === 'mac' ? '' : 'none';
+  if (tab === 'mac') {
+    STATE.sortBy = 'perGbRam';
+  } else {
+    STATE.sortBy = 'price';
+  }
+  STATE.sortDir = 'asc';
+  findBestResults();
+  renderResults();
+}
+
 function exportCsv() {
+  if (STATE.tab === 'mac') { exportCsvMac(); return; }
     const headers = ['Source', 'Model', 'Storage', 'Battery', 'Price', 'Currency', 'Status', 'Condition', 'Colour', 'Retrieved', 'Warranty', 'URL', 'Notes'];
   const lines = [headers.join(',')];
   STATE.results.forEach(row => {
@@ -324,6 +498,82 @@ function init() {
     findBestResults();
     renderResults();
   });
+
+  // MacBook tab wiring (filters read from macbook rows in the same dataset)
+  const macUnits = STATE.units.filter(u => u.product === 'macbook');
+  const mSources = [...new Set(macUnits.map(u => u.source))].sort();
+  const mModels = [...new Set(macUnits.map(u => u.model))].sort();
+  const mScreens = [...new Set(macUnits.map(u => u.screen).filter(Boolean))].sort((a, b) => screenInches(a) - screenInches(b));
+  const mChips = [...new Set(macUnits.map(u => u.chip).filter(Boolean))].sort();
+  const mMemories = [...new Set(macUnits.map(u => u.memory).filter(Boolean))].sort((a, b) => memoryGbOf(a) - memoryGbOf(b));
+  const mStorages = [...new Set(macUnits.map(u => u.storage))].sort((a, b) => storageGb(a) - storageGb(b));
+  const mConditions = [...new Set(macUnits.map(u => u.condition).filter(Boolean))].sort((a, b) => {
+    return (CONDITION_ORDER.indexOf(a) - CONDITION_ORDER.indexOf(b)) || a.localeCompare(b);
+  });
+  mSources.forEach(s => STATE.macSelectedSources.add(s));
+  mModels.forEach(m => STATE.macSelectedModels.add(m));
+  mScreens.forEach(s => STATE.macSelectedScreens.add(s));
+  mChips.forEach(c => STATE.macSelectedChips.add(c));
+  mMemories.forEach(m => STATE.macSelectedMemories.add(m));
+  mStorages.forEach(s => STATE.macSelectedStorages.add(s));
+  mConditions.forEach(c => STATE.macSelectedConditions.add(c));
+
+  const rebuildMacChips = () => {
+    buildChipGroup('m-source', mSources, STATE.macSelectedSources, true, () => { findBestResults(); renderResults(); });
+    buildChipGroup('m-model', mModels, STATE.macSelectedModels, true, () => { findBestResults(); renderResults(); });
+    buildChipGroup('m-screen', mScreens, STATE.macSelectedScreens, true, () => { findBestResults(); renderResults(); });
+    buildChipGroup('m-chip', mChips, STATE.macSelectedChips, true, () => { findBestResults(); renderResults(); });
+    buildChipGroup('m-memory', mMemories, STATE.macSelectedMemories, true, () => { findBestResults(); renderResults(); });
+    buildChipGroup('m-storage', mStorages, STATE.macSelectedStorages, true, () => { findBestResults(); renderResults(); });
+    buildChipGroup('m-condition', mConditions, STATE.macSelectedConditions, true, () => { findBestResults(); renderResults(); });
+  };
+  rebuildMacChips();
+
+  const mSlider = document.getElementById('mMaxPrice');
+  const mMax = Math.max(3000, ...macUnits.map(u => Number(u.price) || 0));
+  mSlider.max = String(Math.ceil(mMax / 100) * 100);
+  mSlider.value = mSlider.max;
+  STATE.macMaxPrice = Number(mSlider.max);
+  document.getElementById('mMaxPriceLabel').textContent = `£${STATE.macMaxPrice}`;
+  document.getElementById('mMaxPriceVal').textContent = `£${STATE.macMaxPrice}`;
+  mSlider.addEventListener('input', (e) => {
+    STATE.macMaxPrice = Number(e.target.value);
+    document.getElementById('mMaxPriceLabel').textContent = `£${STATE.macMaxPrice}`;
+    document.getElementById('mMaxPriceVal').textContent = `£${STATE.macMaxPrice}`;
+    findBestResults();
+    renderResults();
+  });
+
+  document.getElementById('m-price').addEventListener('click', () => {
+    STATE.macPerModel = !STATE.macPerModel;
+    STATE.sortBy = 'price';
+    STATE.sortDir = 'asc';
+    document.getElementById('m-price').classList.toggle('on', STATE.macPerModel);
+    findBestResults();
+    renderResults();
+  });
+
+  document.getElementById('m-reset').addEventListener('click', () => {
+    STATE.macPerModel = false;
+    document.getElementById('m-price').classList.remove('on');
+    STATE.macSelectedSources = new Set(mSources);
+    STATE.macSelectedModels = new Set(mModels);
+    STATE.macSelectedScreens = new Set(mScreens);
+    STATE.macSelectedChips = new Set(mChips);
+    STATE.macSelectedMemories = new Set(mMemories);
+    STATE.macSelectedStorages = new Set(mStorages);
+    STATE.macSelectedConditions = new Set(mConditions);
+    mSlider.value = mSlider.max;
+    STATE.macMaxPrice = Number(mSlider.max);
+    document.getElementById('mMaxPriceLabel').textContent = `£${STATE.macMaxPrice}`;
+    document.getElementById('mMaxPriceVal').textContent = `£${STATE.macMaxPrice}`;
+    rebuildMacChips();
+    findBestResults();
+    renderResults();
+  });
+
+  document.getElementById('tab-iphone').addEventListener('click', () => switchTab('iphone'));
+  document.getElementById('tab-mac').addEventListener('click', () => switchTab('mac'));
 
   findBestResults();
   renderResults();
