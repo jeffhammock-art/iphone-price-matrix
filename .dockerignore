@@ -1,0 +1,19 @@
+# Git
+.git
+.gitignore
+
+# Dependencies (installed in the image)
+node_modules
+
+# Volatile/user-specific data — mounted at runtime, not baked in
+data
+
+# Playwright runtime artifacts
+playwright-report
+test-results
+blob-report
+.playwright
+
+# OS artifacts
+.DS_Store
+Thumbs.db

@@ -1,0 +1,35 @@
+# Convenience compose file for running the crawler inside Docker.
+#
+# Usage:
+#   docker compose run --rm crawler --help
+#   docker compose run --rm crawler crawl --model iphone-15
+#   docker compose run --rm crawler crawl --model iphone-15 --headless
+#   docker compose run --rm crawler watch --model iphone-15
+#
+# Mounts:
+#   - ./data   → /app/data   (scraped data + Chrome profile; persists across runs)
+#   - ./config → /app/config (model config; optional, defaults are in the image)
+#
+# Notes:
+#   - The image defaults to headed Chrome. Inside a container with no display,
+#     headed Chrome will not render to your desktop. Pass --headless to test
+#     headless behaviour, or run the same commands directly on your host.
+#   - Back Market blocks headless (HTTP 403). Pass --headless only for sites
+#     that allow it, or when experimenting.
+#   - To keep the Chrome profile across runs, make sure ./data/.chrome-profile
+#     exists on the host before running. Without it, Back Market may show
+#     bot-check interstitials on first run.
+
+services:
+  crawler:
+    build: .
+    entrypoint: ["npx", "tsx", "src/cli.ts"]
+    command: ["--help"]
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    # Interactive terminal so you can see crawl output and handle any bot-check
+    # interstitials that require a human click (when running headed on a host
+    # with a display, or via VNC/Xvfb inside the container).
+    tty: true
+    stdin_open: true

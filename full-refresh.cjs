@@ -30,7 +30,7 @@ function run(label, cmd) {
 run('cleanup old logs', `powershell -NoProfile -Command "Remove-Item '${path.join(root, 'data', 'backmarket-*.log')}' -Force -ErrorAction SilentlyContinue; Remove-Item '${path.join(root, 'data', 'amazon-*.log')}' -Force -ErrorAction SilentlyContinue; Remove-Item '${path.join(root, 'data', 'refurbed-*.log')}' -Force -ErrorAction SilentlyContinue; Remove-Item '${path.join(root, 'data', 'musicmagpie-*.log')}' -Force -ErrorAction SilentlyContinue; Write-Output 'old logs cleared'"`);
 
 // 1. Back Market crawl (parallel)
-run('crawl Back Market (parallel)', `npm run crawl -- --site Back Market --all --concurrency 6`);
+run('crawl Back Market (parallel)', `npm run crawl -- --site "Back Market" --all --concurrency 6`);
 
 // 2. Amazon crawl
 run('crawl Amazon.co.uk', `npm run crawl -- --site Amazon.co.uk --all`);
@@ -41,8 +41,11 @@ run('crawl Refurbed.co.uk', `npm run crawl -- --site Refurbed.co.uk --all`);
 // 4. MusicMagpie crawl
 run('crawl musicMagpie', `npm run crawl -- --site musicMagpie --all`);
 
-// 5. Clean all
-run('clean all sites', `npm run clean -- --all`);
+// 5. Clean all (one call per site — the CLI requires --site when multiple sites are configured)
+run('clean Back Market', `npm run clean -- --site "Back Market" --all`);
+run('clean Amazon.co.uk', `npm run clean -- --site "Amazon.co.uk" --all`);
+run('clean Refurbed.co.uk', `npm run clean -- --site "Refurbed.co.uk" --all`);
+run('clean musicMagpie', `npm run clean -- --site musicMagpie --all`);
 
 // 6. Build dashboard
 run('build dashboard', `npm run dashboard`);
@@ -56,7 +59,7 @@ timings.forEach(({ label, elapsedSec }) => {
 });
 
 // Write timings to file
-fs.writeFileSync(path.join(root, 'data', 'refresh-timings.txt'), 
+fs.writeFileSync(path.join(root, 'data', 'refresh-timings.txt'),
   `Full refresh completed at ${new Date().toISOString()}\nTotal: ${total} min\n\n` +
   timings.map(({ label, elapsedSec }) => `${label}: ${elapsedSec}s`).join('\n') + '\n',
   'utf8');
