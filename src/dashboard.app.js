@@ -158,7 +158,7 @@ function applySort() {
 
 function findBestResults() {
   if (STATE.tab === 'mac') { findBestMac(); return; }
-  const candidates = STATE.units.filter(row => {
+  const candidates = STATE.units.filter(row => row.product !== 'macbook').filter(row => {
     if (row.status !== 'Available') return false;
     if (!row.price || Number(row.price) <= 0) return false;
     if (Number(row.price) > STATE.maxPrice) return false;
@@ -403,13 +403,16 @@ function exportCsv() {
 function init() {
   STATE.units = window.DASH || [];
 
-  const sources = [...new Set(STATE.units.map(u => u.source))].sort();
-  const models = [...new Set(STATE.units.map(u => u.model))].sort();
-  const storages = [...new Set(STATE.units.map(u => u.storage))].sort((a, b) => storageGb(a) - storageGb(b));
-  const batteries = [...new Set(STATE.units.map(u => u.battery))].sort((a, b) => {
+  // Tab 1 (iPhones) chips + results come from iPhone rows only; the MacBook
+  // tab (below) builds its chips from macbook rows.
+  const iphoneUnits = STATE.units.filter(u => u.product !== 'macbook');
+  const sources = [...new Set(iphoneUnits.map(u => u.source))].sort();
+  const models = [...new Set(iphoneUnits.map(u => u.model))].sort();
+  const storages = [...new Set(iphoneUnits.map(u => u.storage))].sort((a, b) => storageGb(a) - storageGb(b));
+  const batteries = [...new Set(iphoneUnits.map(u => u.battery))].sort((a, b) => {
     return (BATTERY_ORDER.indexOf(a) - BATTERY_ORDER.indexOf(b)) || a.localeCompare(b);
   });
-  const conditions = [...new Set(STATE.units.map(u => u.condition))].sort((a, b) => {
+  const conditions = [...new Set(iphoneUnits.map(u => u.condition))].sort((a, b) => {
     return (CONDITION_ORDER.indexOf(a) - CONDITION_ORDER.indexOf(b)) || a.localeCompare(b);
   });
 
@@ -441,7 +444,7 @@ function init() {
   });
 
   const maxPriceSlider = document.getElementById('maxPrice');
-  const maxP = Math.max(STATE.maxPrice, ...STATE.units.map(u => Number(u.price) || 0));
+  const maxP = Math.max(STATE.maxPrice, ...iphoneUnits.map(u => Number(u.price) || 0));
   maxPriceSlider.max = String(Math.ceil(maxP / 100) * 100);
   maxPriceSlider.value = maxPriceSlider.max;
   STATE.maxPrice = Number(maxPriceSlider.max);
