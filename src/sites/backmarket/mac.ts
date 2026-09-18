@@ -58,7 +58,10 @@ function passesFilters(model: ModelTarget, sel: Record<string, string>): boolean
 }
 
 function optionAllowed(model: ModelTarget, groupId: string, o: InventoriedOption): boolean {
-  if (!o.enabled || o.soldOut) return false;
+  // Disabled radios cannot be clicked (sold-out options are disabled too on
+  // Back Market), so those combinations are unreachable — they end up in the
+  // coverage log, never invented as rows.
+  if (!o.enabled) return false;
   const f = model.filters;
   if (!f) return true;
   if (groupId === "screen_size" && f.minScreenInches != null && inches(o.label) < f.minScreenInches) return false;
@@ -87,7 +90,10 @@ function buildRow(
   const keyboard = sel.keyboard_type_language ?? "";
   if (!condition || !storage || !colour || !screen || !memory) return null;
   if (!passesFilters(model, { screen_size: screen, memory, storage, processor_type_and_graphic_card: chip })) return null;
-  const notes = [`screen ${screen}`, `memory ${memory}`, keyboard ? `keyboard ${keyboard}` : ""]
+  // Preserve the full processor variant text (e.g. "Apple M1 Pro 10-core -
+  // 16-core GPU") — the canonical `chip` field keeps the family only.
+  const chipRaw = state.groups.processor_type_and_graphic_card?.find((o) => o.selected)?.value ?? "";
+  const notes = [`chip ${chipRaw || chip}`, `screen ${screen}`, `memory ${memory}`, keyboard ? `keyboard ${keyboard}` : ""]
     .filter(Boolean)
     .join("; ");
   return {
@@ -129,6 +135,7 @@ async function captureLeaf(job: MacJob, page: Page, path: Record<string, string>
     colour: labels.color ?? "",
     screen: labels.screen_size,
     memory: labels.memory,
+    chip: labels.processor_type_and_graphic_card,
   });
   if (job.seen.has(key)) {
     job.skipped += 1;
@@ -226,6 +233,7 @@ export async function crawlMacModel(
         colour: r.colour,
         screen: r.screen,
         memory: r.memory,
+        chip: r.chip,
       }),
     ),
   );

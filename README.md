@@ -138,7 +138,7 @@ Mounts:
 
 Back Market models: `iphone-15`, `iphone-13`, `iphone-14`, `iphone-15-pro`, `iphone-14-pro`, `iphone-13-pro`, `macbook-pro-m1`
 
-The `macbook-pro-m1` model applies config-driven filters (`config/models.json` → `filters`) at inventory time — branches that fail your criteria are never clicked: minimum screen size (≥ 14"), minimum memory (≥ 16 GB), minimum storage (≥ 512 GB), and an M-series chip pattern. Adjust those values to widen or narrow the crawl.
+The `macbook-pro-m1` crawl walks **every combination the page offers** (13"/14"/16", Fair/Good/Excellent, all M1-family chip variants, all memory/storage/colour options), re-establishing the parent path at each level because changing a parent option resets everything below it — same reset logic as the iPhone configurator, different groups. Combinations whose options are sold-out show as disabled radios and cannot be selected; the crawler logs those to the coverage log rather than inventing rows. The full raw processor variant (e.g. "Apple M1 Pro 10-core - 16-core GPU") is kept in the row `Notes`; the `Chip` column holds the family (`Apple M1 Pro`). Optional `filters` in `config/models.json` (e.g. `minScreenInches`, `minMemoryGb`, `minStorageGb`, `chipPattern`) prune branches at inventory time if you ever want a narrower crawl — currently unset.
 
 Amazon.co.uk models: `amazon-14-128`, `amazon-14-256`, `amazon-14-512`, `amazon-15-128`, `amazon-15-256`, `amazon-15-512`, `amazon-13-128`, `amazon-13-256`, `amazon-13-512`, `amazon-13-pro-128`, `amazon-13-pro-256`, `amazon-13-pro-512`
 

@@ -181,7 +181,7 @@ export function validateRow(row: CaptureRow): RowValidation {
 
 export function rowKey(
   row: Pick<CaptureRow, "site" | "model" | "battery" | "condition" | "storage" | "simType" | "colour"> &
-    Partial<Pick<CaptureRow, "screen" | "memory">>,
+    Partial<Pick<CaptureRow, "screen" | "memory" | "chip">>,
 ): string {
   return [
     row.site,
@@ -193,6 +193,7 @@ export function rowKey(
     row.colour,
     row.screen ?? "",
     row.memory ?? "",
+    row.chip ?? "",
   ].join("|");
 }
 
