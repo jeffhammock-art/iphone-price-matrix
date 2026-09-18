@@ -5,7 +5,7 @@ Local Playwright crawler for refurbished iPhone and MacBook configuration prices
 Sites:
 
 - **Back Market** — iPhone 13/14/15 and their Pro variants, configured via the on-page configurator (Condition → Battery → Storage → SIM type → Colour). Also the MacBook Pro M1 page, whose configurator groups are Screen size → Condition → Chip → Memory → Storage → Colour.
-- **Amazon.co.uk** — specific iPhone models and storage sizes via product pages.
+- **Amazon.co.uk** — specific iPhone models and storage sizes via product pages, plus the MacBook Pro M1 via a search-URL matrix (see flag reference below).
 - **Refurbed.co.uk** — iPhone 13/14/15 and Pro variants.
 - **musicMagpie.co.uk** — iPhone models via category search pages.
 
@@ -30,6 +30,41 @@ Or use Docker (environment is baked into the image; you just mount `data/` and `
 docker build -t iphone-price-matrix .
 docker compose run --rm crawler --help
 ```
+
+## Running on a different laptop
+
+The repo contains everything needed to run — code, `config/models.json`, Docker files. Only the *outputs* (`data/`) are machine-local and intentionally not on GitHub; a fresh clone rebuilds them from live sites.
+
+Prerequisites: Node ≥ 20 and Git.
+
+```bash
+git clone https://github.com/jeffhammock-art/iphone-price-matrix.git
+cd iphone-price-matrix
+npm install
+npm run playwright:install
+```
+
+No API keys or `.env` — site config is committed, so all sites and models work immediately.
+
+Standard cycle (MacBooks shown; swap `--model`/`--site` for iPhones):
+
+```bash
+npm run crawl -- --site "Back Market" --model macbook-pro-m1
+npm run crawl -- --site "Amazon.co.uk" --model macbook-pro-m1
+
+npm run clean -- --site "Back Market" --model macbook-pro-m1
+npm run clean -- --site "Amazon.co.uk" --model macbook-pro-m1
+npm run dashboard
+```
+
+Then open `data/iphone-dashboard.html` by double-clicking it (file:// works), or use `npm run dashboard:serve` for a dev server with a Refresh button.
+
+Expect a **cold Chrome profile** on a fresh machine — the aged, trusted `data/.chrome-profile` is machine-local by design:
+
+- Run headed (the default; do not pass `--headless`) and complete any bot-check checkbox that appears in the Chrome window. Trust builds over the first few sessions and then holds.
+- Back Market may return 403s or interstitials on early runs; the crawler's backoff/cooldown machinery handles it — wait out any cooldown message and re-run the same command.
+- Amazon's MacBook search matrix retries each search up to 3 times and aborts cleanly (exit code 2) if blocking persists.
+- Re-runs are resume-safe by default: configurations already saved in `data/*.jsonl` are skipped, so a partial run just needs the same command again.
 
 ## Running directly on the host
 
@@ -140,7 +175,9 @@ Back Market models: `iphone-15`, `iphone-13`, `iphone-14`, `iphone-15-pro`, `iph
 
 The `macbook-pro-m1` crawl walks **every combination the page offers** (13"/14"/16", Fair/Good/Excellent, all M1-family chip variants, all memory/storage/colour options), re-establishing the parent path at each level because changing a parent option resets everything below it — same reset logic as the iPhone configurator, different groups. Combinations whose options are sold-out show as disabled radios and cannot be selected; the crawler logs those to the coverage log rather than inventing rows. The full raw processor variant (e.g. "Apple M1 Pro 10-core - 16-core GPU") is kept in the row `Notes`; the `Chip` column holds the family (`Apple M1 Pro`). Optional `filters` in `config/models.json` (e.g. `minScreenInches`, `minMemoryGb`, `minStorageGb`, `chipPattern`) prune branches at inventory time if you ever want a narrower crawl — currently unset.
 
-Amazon.co.uk models: `amazon-14-128`, `amazon-14-256`, `amazon-14-512`, `amazon-15-128`, `amazon-15-256`, `amazon-15-512`, `amazon-13-128`, `amazon-13-256`, `amazon-13-512`, `amazon-13-pro-128`, `amazon-13-pro-256`, `amazon-13-pro-512`
+Amazon.co.uk models: `amazon-14-128`, `amazon-14-256`, `amazon-14-512`, `amazon-15-128`, `amazon-15-256`, `amazon-15-512`, `amazon-13-128`, `amazon-13-256`, `amazon-13-512`, `amazon-13-pro-128`, `amazon-13-pro-256`, `amazon-13-pro-512`, `macbook-pro-m1`
+
+The Amazon `macbook-pro-m1` crawl enumerates configurations as **search queries**: screen+chip pairs matching the real product line (13"→M1, 14"→M1 Pro/Max, 16"→M1 Max) × memory (8/16/32/64 GB) × storage (256 GB, 512 GB, 1 TB, 2 TB, 4 TB). Per search it skips sponsored tiles, takes the first organic listing, and captures the headline price plus the tile's "More Buying Choices" price. Amazon fuzzy-matches aggressively, so each listing title is verified against the query: MacBook Air and M2+ chips are rejected, and chip/screen/memory/storage come from the title when detectable (falling back to the searched values). Amazon rate-limits search crawls — a ≥2.5 s gap between searches is enforced regardless of `--delay`; a robot check retries with backoff (solve the captcha in the headed window) and then aborts cleanly for a cooldown.
 
 Refurbed.co.uk models: `iphone-13`, `iphone-13-pro`, `iphone-14`, `iphone-14-pro`, `iphone-15`, `iphone-15-pro`
 
@@ -153,9 +190,6 @@ musicMagPie models: `iphone-13`, `iphone-14`, `iphone-15`, `iphone-13-pro`, `iph
 - Continue if the host is not the configured origin or the currency is not GBP
 
 A Chrome window will open when running headed. Back Market blocks headless browsers and often shows a short bot check on the first run — complete the checkbox if it appears. The crawler reuses `data/.chrome-profile` so later runs usually skip that check.
-| `--delay` | 450 | milliseconds to wait after each selection |
-| `--no-resume` | off | ignore the existing JSONL file and recapture (still appends; delete `data/*.jsonl` to start clean) |
-| `--concurrency` | 1 | parallel workers for `--all` (Back Market only; shared Chrome context) |
 
 ## Outputs
 
