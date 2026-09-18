@@ -134,5 +134,7 @@ export async function writeCleanCsv(
 }
 
 function rowKeyOf(row: CaptureRow): string {
-  return `${row.model}|${row.condition}|${row.battery}|${row.storage}|${row.simType}|${row.colour}`;
+  // Includes the Mac-only fields so MacBook configurations with the same
+  // condition/storage/colour but different screen/memory/chip stay distinct.
+  return `${row.model}|${row.condition}|${row.battery}|${row.storage}|${row.simType}|${row.colour}|${row.screen ?? ""}|${row.memory ?? ""}|${row.chip ?? ""}`;
 }
