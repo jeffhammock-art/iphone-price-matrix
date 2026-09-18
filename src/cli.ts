@@ -8,6 +8,7 @@ import { rowKey } from "./types.js";
 import { calibrateModel, crawlModel, probeModel, withBrowser, withBrowserContext } from "./sites/backmarket/crawl.js";
 import { crawlMacModel } from "./sites/backmarket/mac.js";
 import { crawlAmazonModel } from "./sites/amazon/crawl.js";
+import { crawlAmazonMacModel } from "./sites/amazon/mac.js";
 import { crawlRefurbedModel } from "./sites/refurbed/crawl.js";
 import { crawlMusicMagpieModel } from "./sites/musicmagpie/crawl.js";
 import { RateLimitError, setPagePaceId } from "./rate-limit.js";
@@ -101,12 +102,14 @@ async function main(): Promise<void> {
 
     let result;
     if (model.product === "macbook") {
-      result = await crawlMacModel(page, model, dataDir, {
-        headed,
-        resume: !values["no-resume"],
-        maxRows,
-        delayMs,
-      });
+      result = isAmazon
+        ? await crawlAmazonMacModel(page, model, dataDir, { headed, delayMs, maxRows })
+        : await crawlMacModel(page, model, dataDir, {
+            headed,
+            resume: !values["no-resume"],
+            maxRows,
+            delayMs,
+          });
     } else if (isAmazon) {
       result = await crawlAmazonModel(page, model, dataDir, { headed, delayMs });
     } else if (sitePrefix === "refurbed") {
