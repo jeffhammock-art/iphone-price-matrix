@@ -8,12 +8,14 @@ import { rowKey } from "../../types.js";
 import { appendCoverage, appendRow, finalizeCsv, loadExistingRows, modelPaths } from "../../store.js";
 import { openProduct } from "./crawl.js";
 import { readLivePickers } from "./page.js";
+import { backoffOnBlock, setPagePaceId } from "../../rate-limit.js";
 import {
   MAC_GROUP_ORDER,
   ensureValues,
   readInventory,
   selectByValueDetailed,
   waitForConfiguratorStable,
+  type SelectOutcome,
 } from "./inventory.js";
 
 const TRAVERSE: readonly string[] = MAC_GROUP_ORDER;
@@ -30,6 +32,32 @@ interface MacJob {
 
 function jobPaths(job: MacJob) {
   return modelPaths(job.dataDir, job.model.id, "backmarket");
+}
+
+function pause(ms: number): Promise<void> {
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Challenge / off-site detection: a wedged page has no configurator. */
+async function isBlocked(page: Page): Promise<boolean> {
+  try {
+    const title = await page.title();
+    if (/just a moment|attention required|access denied/i.test(title)) return true;
+    return !/backmarket\.co\.uk/.test(page.url());
+  } catch {
+    return true;
+  }
+}
+
+/** Why a select failed — recorded to coverage so the log explains itself. */
+async function diagnose(page: Page, outcome: SelectOutcome): Promise<string> {
+  try {
+    const title = await page.title();
+    return `redirected=${outcome.redirected} url=${page.url().slice(0, 140)} title="${title.slice(0, 60)}"`;
+  } catch {
+    return `redirected=${outcome.redirected} url=(unavailable)`;
+  }
 }
 
 function inches(label: string): number {
@@ -122,6 +150,16 @@ function buildRow(
 }
 
 async function captureLeaf(job: MacJob, page: Page, path: Record<string, string>): Promise<void> {
+  // A challenge/redirect can land on a leaf too — recover before reading.
+  if (await isBlocked(page)) {
+    await appendCoverage(jobPaths(job).coverage, `blocked at leaf path=${JSON.stringify(path)}; recovering`);
+    await backoffOnBlock();
+    await openProduct(page, job.model.url);
+    if (!(await ensureValues(page, path, TRAVERSE))) {
+      await appendCoverage(jobPaths(job).coverage, `leaf recovery could not re-establish path=${JSON.stringify(path)}`);
+      return;
+    }
+  }
   await waitForConfiguratorStable(page, 6000).catch(() => null);
   const state = await readInventory(page);
   const labels = state.selectedLabels;
@@ -204,9 +242,28 @@ async function dfs(job: MacJob, page: Page, path: Record<string, string>, depth:
   }
   for (const option of options) {
     if (job.maxRows != null && job.captured >= job.maxRows) return;
-    const outcome = await selectByValueDetailed(page, groupId, option.value);
+    await pause(job.opts.delayMs);
+    let outcome = await selectByValueDetailed(page, groupId, option.value);
     if (!outcome.ok) {
-      await appendCoverage(jobPaths(job).coverage, `select failed ${groupId}=${option.label}[${option.value}]`);
+      // A failed click can leave the page wedged (redirected to a combination
+      // with no offer, or a challenge) — every subsequent select then fails.
+      // Recover exactly like the iPhone crawler's reload-hub: reload the
+      // product, re-establish the parent path, retry once. Sustained
+      // challenges escalate via backoffOnBlock -> RateLimitError.
+      const why = await diagnose(page, outcome);
+      if (await isBlocked(page)) {
+        await backoffOnBlock();
+      }
+      await appendCoverage(jobPaths(job).coverage, `select failed ${groupId}=${option.label}[${option.value}] (${why}); recovering`);
+      await openProduct(page, job.model.url);
+      if (!(await ensureValues(page, path, TRAVERSE))) {
+        await appendCoverage(jobPaths(job).coverage, `recovery could not re-establish path=${JSON.stringify(path)}`);
+        return;
+      }
+      outcome = await selectByValueDetailed(page, groupId, option.value);
+    }
+    if (!outcome.ok) {
+      await appendCoverage(jobPaths(job).coverage, `select retry failed ${groupId}=${option.label}[${option.value}] — combination likely has no offer`);
       continue;
     }
     await dfs(job, page, { ...path, [groupId]: option.value }, depth + 1);
@@ -239,6 +296,7 @@ export async function crawlMacModel(
   );
   const job: MacJob = { model, dataDir, opts, seen, captured: 0, skipped: 0, maxRows: opts.maxRows };
   console.log(`\n[Back Market] [${model.name}] === Mac crawl (${seen.size} rows already saved) ===`);
+  setPagePaceId(page, `mac-${Date.now().toString(36)}`);
   await openProduct(page, model.url);
   await dfs(job, page, {}, 0);
   await finalizeCsv(paths).catch(() => undefined);
